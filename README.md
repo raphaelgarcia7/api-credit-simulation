@@ -326,43 +326,6 @@ curl --request POST "http://localhost:8080/clientes/1/simulacoes" \
 ```bash
 curl --request GET "http://localhost:8080/clientes/1/simulacoes?page=0&size=10"
 ```
-
-## Exemplo de consultas SQL
-
-### Listar clientes
-
-```sql
-select * from clientes;
-```
-
-### Listar endereços
-
-```sql
-select * from enderecos;
-```
-
-### Listar simulações
-
-```sql
-select * from simulacoes;
-```
-
-### Listar simulações com dados do cliente
-
-```sql
-select s.id,
-       s.data_hora_simulacao,
-       s.valor_solicitado,
-       s.valor_garantia,
-       s.quantidade_meses,
-       s.taxa_juros_mensal,
-       c.id as cliente_id,
-       c.nome,
-       c.cpf
-from simulacoes s
-join clientes c on c.id = s.cliente_id;
-```
-
 ## Tratamento de erros
 
 O projeto possui tratamento global de exceções com respostas padronizadas.
@@ -390,13 +353,6 @@ Exemplo:
 - testes isolados do banco principal
 - paginação com contrato de resposta estável
 
-## Melhorias futuras possíveis
-
-- incluir documentação OpenAPI/Swagger
-- adicionar migrations com Flyway ou Liquibase
-- incluir coleção do Postman no repositório
-- criar testes de integração mais detalhados para cenários de erro
-
 ## Autor
 
-Projeto desenvolvido por Raphael Garcia para preparação de entrevista técnica de Backend Java.
+Projeto desenvolvido por Raphael Melo.
