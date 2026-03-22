@@ -106,8 +106,16 @@ Os testes automatizados utilizam H2 em memória, sem dependência do PostgreSQL 
 
 ### Executar a aplicação
 
+Com Maven instalado:
+
 ```bash
 mvn spring-boot:run
+```
+
+Com Maven Wrapper:
+
+```bash
+./mvnw spring-boot:run
 ```
 
 A aplicação será iniciada em:
@@ -118,8 +126,16 @@ http://localhost:8080
 
 ## Como rodar os testes
 
+Com Maven instalado:
+
 ```bash
 mvn test
+```
+
+Com Maven Wrapper:
+
+```bash
+./mvnw test
 ```
 
 ## Endpoints
