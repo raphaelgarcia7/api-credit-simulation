@@ -10,6 +10,10 @@ import java.util.List;
 
 @Repository
 public interface SimulacaoRepository extends JpaRepository<Simulacao, Long> {
-    List<Simulacao> findByClienteId(Long id);
-    Page<Simulacao> findByClienteId(Long id, Pageable pageable);
+
+    boolean existsByClienteId(Long clienteId);
+
+    List<Simulacao> findAllByClienteIdOrderByDataHoraSimulacaoDesc(Long clienteId);
+
+    Page<Simulacao> findAllByClienteId(Long clienteId, Pageable pageable);
 }

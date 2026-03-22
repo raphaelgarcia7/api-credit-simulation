@@ -2,39 +2,41 @@ package com.raphael.apicreditsimulation.service;
 
 import com.raphael.apicreditsimulation.dto.ClienteRequestDTO;
 import com.raphael.apicreditsimulation.dto.ClienteResponseDTO;
+import com.raphael.apicreditsimulation.dto.EnderecoRequestDTO;
+import com.raphael.apicreditsimulation.dto.EnderecoResponseDTO;
 import com.raphael.apicreditsimulation.entities.Cliente;
+import com.raphael.apicreditsimulation.entities.Endereco;
 import com.raphael.apicreditsimulation.exception.ConflictException;
 import com.raphael.apicreditsimulation.exception.NotFoundException;
 import com.raphael.apicreditsimulation.repository.ClienteRepository;
+import com.raphael.apicreditsimulation.repository.SimulacaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
 
 @Service
 @RequiredArgsConstructor
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final SimulacaoRepository simulacaoRepository;
 
+    @Transactional
     public ClienteResponseDTO criar(ClienteRequestDTO dto) {
-        clienteRepository.findByCpf(dto.cpf()).
-                ifPresent(cliente -> {
-                    throw new ConflictException("CPF já cadastrado");
-                });
+        validarCpfDisponivel(dto.cpf(), null);
 
         Cliente cliente = Cliente.builder()
                 .cpf(dto.cpf())
                 .nome(dto.nome())
-                .endereco(dto.endereco())
+                .endereco(toEndereco(dto.endereco()))
                 .build();
 
-        Cliente salvo = clienteRepository.save(cliente);
-
-        return toResponseDTO(salvo);
+        return toResponseDTO(clienteRepository.save(cliente));
     }
 
+    @Transactional(readOnly = true)
     public List<ClienteResponseDTO> listarTodos() {
         return clienteRepository.findAll()
                 .stream()
@@ -42,30 +44,76 @@ public class ClienteService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public ClienteResponseDTO buscarPorId(Long id) {
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cliente não encontrado"));
-
-        return toResponseDTO(cliente);
+        return toResponseDTO(buscarEntidadePorId(id));
     }
 
+    @Transactional
     public ClienteResponseDTO atualizar(Long id, ClienteRequestDTO dto) {
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cliente não encontrado."));
+        Cliente cliente = buscarEntidadePorId(id);
+        validarCpfDisponivel(dto.cpf(), id);
 
         cliente.setCpf(dto.cpf());
         cliente.setNome(dto.nome());
-        cliente.setEndereco(dto.endereco());
+        cliente.setEndereco(atualizarEndereco(cliente.getEndereco(), dto.endereco()));
 
-        Cliente salvo = clienteRepository.save(cliente);
-        return toResponseDTO(salvo);
+        return toResponseDTO(clienteRepository.save(cliente));
     }
 
+    @Transactional
     public void deletar(Long id) {
-        clienteRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Cliente não encontrado."));
+        Cliente cliente = buscarEntidadePorId(id);
 
-        clienteRepository.deleteById(id);
+        if (simulacaoRepository.existsByClienteId(id)) {
+            throw new ConflictException("Nao e possivel remover um cliente com simulacoes cadastradas.");
+        }
+
+        clienteRepository.delete(cliente);
+    }
+
+    private void validarCpfDisponivel(String cpf, Long clienteId) {
+        if (clienteId == null) {
+            clienteRepository.findByCpf(cpf)
+                    .ifPresent(cliente -> {
+                        throw new ConflictException("CPF ja cadastrado.");
+                    });
+            return;
+        }
+
+        if (clienteRepository.existsByCpfAndIdNot(cpf, clienteId)) {
+            throw new ConflictException("CPF ja cadastrado.");
+        }
+    }
+
+    private Cliente buscarEntidadePorId(Long id) {
+        return clienteRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Cliente nao encontrado."));
+    }
+
+    private Endereco atualizarEndereco(Endereco enderecoAtual, EnderecoRequestDTO dto) {
+        if (enderecoAtual == null) {
+            return toEndereco(dto);
+        }
+
+        enderecoAtual.setRua(dto.rua());
+        enderecoAtual.setNumero(dto.numero());
+        enderecoAtual.setBairro(dto.bairro());
+        enderecoAtual.setCep(dto.cep());
+        enderecoAtual.setCidade(dto.cidade());
+        enderecoAtual.setEstado(dto.estado());
+        return enderecoAtual;
+    }
+
+    private Endereco toEndereco(EnderecoRequestDTO dto) {
+        return Endereco.builder()
+                .rua(dto.rua())
+                .numero(dto.numero())
+                .bairro(dto.bairro())
+                .cep(dto.cep())
+                .cidade(dto.cidade())
+                .estado(dto.estado())
+                .build();
     }
 
     private ClienteResponseDTO toResponseDTO(Cliente cliente) {
@@ -73,7 +121,19 @@ public class ClienteService {
                 cliente.getId(),
                 cliente.getCpf(),
                 cliente.getNome(),
-                cliente.getEndereco()
+                toEnderecoResponseDTO(cliente.getEndereco())
+        );
+    }
+
+    private EnderecoResponseDTO toEnderecoResponseDTO(Endereco endereco) {
+        return new EnderecoResponseDTO(
+                endereco.getId(),
+                endereco.getRua(),
+                endereco.getNumero(),
+                endereco.getBairro(),
+                endereco.getCep(),
+                endereco.getCidade(),
+                endereco.getEstado()
         );
     }
 }

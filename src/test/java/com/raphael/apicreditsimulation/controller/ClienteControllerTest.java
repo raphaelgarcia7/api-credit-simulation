@@ -2,7 +2,7 @@ package com.raphael.apicreditsimulation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raphael.apicreditsimulation.dto.ClienteRequestDTO;
-import com.raphael.apicreditsimulation.entities.Endereco;
+import com.raphael.apicreditsimulation.dto.EnderecoRequestDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +13,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -31,23 +35,15 @@ class ClienteControllerTest {
     @Test
     @DisplayName("Deve criar cliente e retornar 201")
     void deveCriarCliente() throws Exception {
-        Endereco endereco = Endereco.builder()
-                .rua("Rua das Flores")
-                .numero("123")
-                .bairro("Centro")
-                .cep("12345678")
-                .cidade("São Paulo")
-                .estado("SP")
-                .build();
-
-        ClienteRequestDTO dto = new ClienteRequestDTO("11122233344", "João Silva", endereco);
+        ClienteRequestDTO dto = criarClienteRequest("11122233344", "Joao Silva");
 
         mockMvc.perform(post("/clientes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.nome").value("João Silva"))
-                .andExpect(jsonPath("$.cpf").value("11122233344"));
+                .andExpect(jsonPath("$.nome").value("Joao Silva"))
+                .andExpect(jsonPath("$.cpf").value("11122233344"))
+                .andExpect(jsonPath("$.endereco.cidade").value("Sao Paulo"));
     }
 
     @Test
@@ -58,35 +54,71 @@ class ClienteControllerTest {
     }
 
     @Test
-    @DisplayName("Deve retornar 404 ao buscar cliente inexistente")
-    void deveRetornar404QuandoClienteNaoEncontrado() throws Exception {
-        mockMvc.perform(get("/clientes/9999"))
-                .andExpect(status().isNotFound());
+    @DisplayName("Deve buscar cliente por id e retornar 200")
+    void deveBuscarClientePorId() throws Exception {
+        Long id = criarClienteERetornarId("99988877766", "Maria Silva");
+
+        mockMvc.perform(get("/clientes/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.nome").value("Maria Silva"));
+    }
+
+    @Test
+    @DisplayName("Deve atualizar cliente e retornar 200")
+    void deveAtualizarCliente() throws Exception {
+        Long id = criarClienteERetornarId("22233344455", "Cliente Original");
+        ClienteRequestDTO dtoAtualizacao = criarClienteRequest("22233344455", "Cliente Atualizado");
+
+        mockMvc.perform(put("/clientes/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoAtualizacao)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.nome").value("Cliente Atualizado"));
     }
 
     @Test
     @DisplayName("Deve deletar cliente e retornar 204")
     void deveDeletarCliente() throws Exception {
-        Endereco endereco = Endereco.builder()
-                .rua("Rua das Flores")
-                .numero("123")
-                .bairro("Centro")
-                .cep("12345678")
-                .cidade("São Paulo")
-                .estado("SP")
-                .build();
+        Long id = criarClienteERetornarId("55544433322", "Cliente Removivel");
 
-        ClienteRequestDTO dto = new ClienteRequestDTO("99988877766", "Maria Silva", endereco);
+        mockMvc.perform(delete("/clientes/{id}", id))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("Deve retornar 404 ao buscar cliente inexistente")
+    void deveRetornar404QuandoClienteNaoEncontrado() throws Exception {
+        mockMvc.perform(get("/clientes/9999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Cliente nao encontrado."));
+    }
+
+    private Long criarClienteERetornarId(String cpf, String nome) throws Exception {
+        ClienteRequestDTO dto = criarClienteRequest(cpf, nome);
 
         String response = mockMvc.perform(post("/clientes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
-        Long id = objectMapper.readTree(response).get("id").asLong();
+        return objectMapper.readTree(response).get("id").asLong();
+    }
 
-        mockMvc.perform(delete("/clientes/" + id))
-                .andExpect(status().isNoContent());
+    private ClienteRequestDTO criarClienteRequest(String cpf, String nome) {
+        EnderecoRequestDTO endereco = new EnderecoRequestDTO(
+                "Rua das Flores",
+                "123",
+                "Centro",
+                "01001000",
+                "Sao Paulo",
+                "SP"
+        );
+
+        return new ClienteRequestDTO(cpf, nome, endereco);
     }
 }
