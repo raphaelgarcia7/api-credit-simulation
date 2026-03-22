@@ -1,15 +1,16 @@
 # API Credit Simulation
 
-API REST desenvolvida com Java 21 e Spring Boot para cadastro de clientes e gerenciamento de simulacoes de credito.
+API REST desenvolvida com Java 21 e Spring Boot 3 para cadastro de clientes e simulação de crédito.
 
-O projeto contempla:
+O projeto foi estruturado para atender ao desafio técnico com foco em:
 
-- CRUD de clientes
-- Criacao de simulacoes vinculadas a um cliente
-- Listagem de simulacoes por cliente
-- Paginacao da listagem
-- Exportacao das simulacoes em `CSV` e `TXT`
-- Testes automatizados para os principais endpoints
+- CRUD completo de clientes
+- relacionamento `1:1` entre cliente e endereço
+- criação de simulações vinculadas a clientes
+- listagem paginada de simulações por cliente
+- exportação das simulações em `CSV` e `TXT`
+- testes automatizados para todos os endpoints REST
+- separação de responsabilidades entre controller, service, repository e DTOs
 
 ## Tecnologias utilizadas
 
@@ -17,24 +18,26 @@ O projeto contempla:
 - Spring Boot 3.4.3
 - Spring Web
 - Spring Data JPA
+- Spring Validation
 - Lombok
 - PostgreSQL
+- H2
 - JUnit 5
 - MockMvc
-- Gradle
+- Maven
 
-## Arquitetura do projeto
+## Estrutura do projeto
 
-O projeto esta organizado em camadas para manter responsabilidades separadas:
+O projeto está organizado em camadas:
 
-- `controller`: exposicao dos endpoints REST
-- `service`: regras de negocio e orquestracao
-- `repository`: acesso aos dados com Spring Data JPA
-- `dto`: objetos de entrada e saida da API
-- `entities`: entidades persistidas no banco
-- `exception`: excecoes de dominio e tratamento global
+- `controller`: expõe os endpoints REST
+- `service`: concentra as regras de negócio
+- `repository`: realiza o acesso ao banco de dados
+- `dto`: define os contratos de entrada e saída da API
+- `entities`: representa as entidades persistidas
+- `exception`: centraliza exceções e tratamento global de erros
 
-## Modelo de dominio
+## Modelo de domínio
 
 ### Cliente
 
@@ -45,10 +48,11 @@ Campos:
 - `nome`
 - `endereco`
 
-### Endereco
+### Endereço
 
 Campos:
 
+- `id`
 - `rua`
 - `numero`
 - `bairro`
@@ -56,9 +60,7 @@ Campos:
 - `cidade`
 - `estado`
 
-No estado atual do projeto, `Endereco` esta modelado como `@Embedded` dentro de `Cliente`.
-
-### Simulacao
+### Simulação
 
 Campos:
 
@@ -70,13 +72,16 @@ Campos:
 - `quantidadeMeses`
 - `taxaJurosMensal`
 
-## Requisitos para executar
+## Relacionamentos
 
-- Java 21 instalado
-- PostgreSQL em execucao local
-- Banco `credit_simulation` criado
+- `Cliente` possui um `Endereço` em relacionamento `OneToOne`
+- `Simulação` pertence a um `Cliente` em relacionamento `ManyToOne`
 
-Configuracao atual em `src/main/resources/application.properties`:
+## Banco de dados
+
+### Ambiente principal
+
+O projeto está configurado para usar PostgreSQL localmente:
 
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/credit_simulation
@@ -84,25 +89,28 @@ spring.datasource.username=admin
 spring.datasource.password=admin
 ```
 
-Se necessario, ajuste usuario, senha e URL conforme o seu ambiente.
+Se necessário, ajuste os valores em [application.properties](/C:/PROJETOS/api-credit-simulation/src/main/resources/application.properties).
 
-## Como executar
+### Ambiente de testes
 
-1. Suba o PostgreSQL localmente
-2. Garanta que o banco `credit_simulation` exista
-3. Execute a aplicacao
+Os testes automatizados utilizam H2 em memória, sem dependência do PostgreSQL local.
+
+## Como executar o projeto
+
+### Pré-requisitos
+
+- Java 21 instalado
+- Maven instalado
+- PostgreSQL em execução
+- banco `credit_simulation` criado
+
+### Executar a aplicação
 
 ```bash
-./gradlew bootRun
+mvn spring-boot:run
 ```
 
-No Windows PowerShell:
-
-```powershell
-.\gradlew.bat bootRun
-```
-
-A aplicacao sera iniciada, por padrao, em:
+A aplicação será iniciada em:
 
 ```text
 http://localhost:8080
@@ -111,13 +119,7 @@ http://localhost:8080
 ## Como rodar os testes
 
 ```bash
-./gradlew test
-```
-
-No Windows PowerShell:
-
-```powershell
-.\gradlew.bat test
+mvn test
 ```
 
 ## Endpoints
@@ -137,45 +139,29 @@ http://localhost:8080
 ```json
 {
   "cpf": "12345678901",
-  "nome": "Joao Silva",
+  "nome": "João Silva",
   "endereco": {
     "rua": "Rua das Flores",
     "numero": "123",
     "bairro": "Centro",
     "cep": "01001000",
-    "cidade": "Sao Paulo",
+    "cidade": "São Paulo",
     "estado": "SP"
   }
 }
 ```
 
-#### Response esperada
+#### Responses esperadas
 
 - `201 Created`
+- `400 Bad Request` para payload inválido
+- `409 Conflict` para CPF já cadastrado
 
-#### Exemplo de retorno
-
-```json
-{
-  "id": 1,
-  "cpf": "12345678901",
-  "nome": "Joao Silva",
-  "endereco": {
-    "rua": "Rua das Flores",
-    "numero": "123",
-    "bairro": "Centro",
-    "cep": "01001000",
-    "cidade": "Sao Paulo",
-    "estado": "SP"
-  }
-}
-```
-
-### 2. Listar todos os clientes
+### 2. Listar clientes
 
 `GET /clientes`
 
-#### Response esperada
+#### Responses esperadas
 
 - `200 OK`
 
@@ -183,10 +169,10 @@ http://localhost:8080
 
 `GET /clientes/{id}`
 
-#### Response esperada
+#### Responses esperadas
 
 - `200 OK`
-- `404 Not Found` quando o cliente nao existir
+- `404 Not Found` se o cliente não existir
 
 ### 4. Atualizar cliente
 
@@ -197,137 +183,155 @@ http://localhost:8080
 ```json
 {
   "cpf": "12345678901",
-  "nome": "Joao da Silva",
+  "nome": "João da Silva",
   "endereco": {
     "rua": "Rua Nova",
     "numero": "500",
     "bairro": "Centro",
     "cep": "01001000",
-    "cidade": "Sao Paulo",
+    "cidade": "São Paulo",
     "estado": "SP"
   }
 }
 ```
 
-#### Response esperada
+#### Responses esperadas
 
 - `200 OK`
-- `404 Not Found` quando o cliente nao existir
+- `400 Bad Request` para payload inválido
+- `404 Not Found` se o cliente não existir
+- `409 Conflict` se o CPF já estiver em uso por outro cliente
 
 ### 5. Deletar cliente
 
 `DELETE /clientes/{id}`
 
-#### Response esperada
+#### Responses esperadas
 
 - `204 No Content`
-- `404 Not Found` quando o cliente nao existir
+- `404 Not Found` se o cliente não existir
+- `409 Conflict` se o cliente possuir simulações vinculadas
 
-### 6. Criar simulacao
+### 6. Criar simulação para um cliente
 
-`POST /simulacoes`
+`POST /clientes/{clienteId}/simulacoes`
 
 #### Request
 
+Os dados abaixo refletem exatamente os valores pedidos no enunciado:
+
 ```json
 {
-  "clienteId": 1,
   "dataHoraSimulacao": "2024-06-15T10:30:26",
   "valorSolicitado": 300000.00,
   "valorGarantia": 1000000.00,
   "quantidadeMeses": 150,
-  "taxaJurosMensal": 0.02
+  "taxaJurosMensal": 2.00
 }
 ```
 
-#### Response esperada
+#### Responses esperadas
 
 - `201 Created`
-- `404 Not Found` quando o cliente nao existir
+- `400 Bad Request` para payload inválido
+- `404 Not Found` se o cliente não existir
 
-### 7. Listar simulacoes de um cliente
+### 7. Listar simulações paginadas de um cliente
 
-`GET /simulacoes/cliente/{clienteId}`
+`GET /clientes/{clienteId}/simulacoes?page=0&size=10`
 
-#### Response esperada
+#### Exemplo de resposta
 
-- `200 OK`
-- `404 Not Found` quando o cliente nao existir
-
-### 8. Listar simulacoes de um cliente com paginacao
-
-`GET /simulacoes/cliente/{clienteId}/paginado?page=0&size=10`
-
-#### Response esperada
-
-- `200 OK`
-- `404 Not Found` quando o cliente nao existir
-
-#### Exemplo de uso
-
-```text
-GET /simulacoes/cliente/1/paginado?page=0&size=5
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "clienteId": 1,
+      "dataHoraSimulacao": "2024-06-15T10:30:26",
+      "valorSolicitado": 300000.00,
+      "valorGarantia": 1000000.00,
+      "quantidadeMeses": 150,
+      "taxaJurosMensal": 2.00
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 1,
+  "totalPages": 1,
+  "first": true,
+  "last": true
+}
 ```
 
-### 9. Exportar simulacoes em CSV
-
-`GET /simulacoes/cliente/{clienteId}/exportar/csv`
-
-#### Response esperada
+#### Responses esperadas
 
 - `200 OK`
-- Header `Content-Type: text/csv`
-- Header `Content-Disposition: attachment; filename=simulacoes.csv`
+- `404 Not Found` se o cliente não existir
 
-### 10. Exportar simulacoes em TXT
+### 8. Exportar simulações em CSV
 
-`GET /simulacoes/cliente/{clienteId}/exportar/txt`
+`GET /clientes/{clienteId}/simulacoes/exportacao/csv`
 
-#### Response esperada
+#### Responses esperadas
 
 - `200 OK`
-- Header `Content-Type: text/plain`
-- Header `Content-Disposition: attachment; filename=simulacoes.txt`
+- `404 Not Found` se o cliente não existir
 
-## Exemplo rapido com cURL
+### 9. Exportar simulações em TXT
+
+`GET /clientes/{clienteId}/simulacoes/exportacao/txt`
+
+#### Responses esperadas
+
+- `200 OK`
+- `404 Not Found` se o cliente não existir
+
+## Exemplo rápido com cURL
 
 ### Criar cliente
 
 ```bash
 curl --request POST "http://localhost:8080/clientes" \
   --header "Content-Type: application/json" \
-  --data "{\"cpf\":\"12345678901\",\"nome\":\"Joao Silva\",\"endereco\":{\"rua\":\"Rua das Flores\",\"numero\":\"123\",\"bairro\":\"Centro\",\"cep\":\"01001000\",\"cidade\":\"Sao Paulo\",\"estado\":\"SP\"}}"
+  --data "{\"cpf\":\"12345678901\",\"nome\":\"João Silva\",\"endereco\":{\"rua\":\"Rua das Flores\",\"numero\":\"123\",\"bairro\":\"Centro\",\"cep\":\"01001000\",\"cidade\":\"São Paulo\",\"estado\":\"SP\"}}"
 ```
 
-### Criar simulacao
+### Criar simulação
 
 ```bash
-curl --request POST "http://localhost:8080/simulacoes" \
+curl --request POST "http://localhost:8080/clientes/1/simulacoes" \
   --header "Content-Type: application/json" \
-  --data "{\"clienteId\":1,\"dataHoraSimulacao\":\"2024-06-15T10:30:26\",\"valorSolicitado\":300000.00,\"valorGarantia\":1000000.00,\"quantidadeMeses\":150,\"taxaJurosMensal\":0.02}"
+  --data "{\"dataHoraSimulacao\":\"2024-06-15T10:30:26\",\"valorSolicitado\":300000.00,\"valorGarantia\":1000000.00,\"quantidadeMeses\":150,\"taxaJurosMensal\":2.00}"
 ```
 
-### Listar simulacoes paginadas
+### Listar simulações paginadas
 
 ```bash
-curl --request GET "http://localhost:8080/simulacoes/cliente/1/paginado?page=0&size=10"
+curl --request GET "http://localhost:8080/clientes/1/simulacoes?page=0&size=10"
 ```
 
-## Exemplos de consultas SQL
+## Exemplo de consultas SQL
 
 ### Listar clientes
 
 ```sql
-select * from cliente;
+select * from clientes;
 ```
 
-### Listar simulacoes
+### Listar endereços
 
 ```sql
-select * from simulacao;
+select * from enderecos;
 ```
 
-### Listar simulacoes com dados do cliente
+### Listar simulações
+
+```sql
+select * from simulacoes;
+```
+
+### Listar simulações com dados do cliente
 
 ```sql
 select s.id,
@@ -339,31 +343,44 @@ select s.id,
        c.id as cliente_id,
        c.nome,
        c.cpf
-from simulacao s
-join cliente c on c.id = s.cliente_id;
+from simulacoes s
+join clientes c on c.id = s.cliente_id;
 ```
 
 ## Tratamento de erros
 
-Atualmente a API trata globalmente:
+O projeto possui tratamento global de exceções com respostas padronizadas.
 
-- `404 Not Found` para recursos nao encontrados
-- `409 Conflict` para CPF duplicado no cadastro
+Exemplo:
 
-## Observacoes
+```json
+{
+  "timestamp": "2026-03-22T19:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Cliente nao encontrado.",
+  "path": "/clientes/9999",
+  "validationErrors": null
+}
+```
 
-- O projeto utiliza `BigDecimal` para valores monetarios e taxa de juros, evitando problemas de precisao.
-- O Hibernate esta configurado com `ddl-auto=update` para facilitar a execucao local.
-- Os testes automatizados usam MockMvc para validacao dos endpoints.
+## Qualidade e boas práticas aplicadas
 
-## Melhorias futuras
+- uso de DTOs para não expor entidades diretamente
+- validação de entrada com Bean Validation
+- tratamento global de exceções
+- retorno consistente de status HTTP
+- regras de negócio centralizadas em services
+- testes isolados do banco principal
+- paginação com contrato de resposta estável
 
-- Adicionar validacoes com Bean Validation
-- Melhorar o padrao de resposta de erro
-- Isolar o ambiente de testes com H2 ou Testcontainers
-- Revisar a modelagem de endereco para uma relacao `OneToOne`, se necessario para aderencia literal ao requisito
-- Ampliar a cobertura de testes
+## Melhorias futuras possíveis
+
+- incluir documentação OpenAPI/Swagger
+- adicionar migrations com Flyway ou Liquibase
+- incluir coleção do Postman no repositório
+- criar testes de integração mais detalhados para cenários de erro
 
 ## Autor
 
-Projeto desenvolvido por Raphael Garcia para estudo e preparacao de entrevista tecnica Java Backend.
+Projeto desenvolvido por Raphael Garcia para preparação de entrevista técnica de Backend Java.
