@@ -224,7 +224,6 @@ http://localhost:8080
 
 - `204 No Content`
 - `404 Not Found` se o cliente não existir
-- `409 Conflict` se o cliente possuir simulações vinculadas
 
 ### 6. Criar simulação para um cliente
 

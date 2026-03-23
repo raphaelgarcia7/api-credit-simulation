@@ -6,10 +6,8 @@ import com.raphael.apicreditsimulation.dto.EnderecoRequestDTO;
 import com.raphael.apicreditsimulation.dto.EnderecoResponseDTO;
 import com.raphael.apicreditsimulation.entities.Cliente;
 import com.raphael.apicreditsimulation.entities.Endereco;
-import com.raphael.apicreditsimulation.exception.ConflictException;
 import com.raphael.apicreditsimulation.exception.NotFoundException;
 import com.raphael.apicreditsimulation.repository.ClienteRepository;
-import com.raphael.apicreditsimulation.repository.SimulacaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +19,6 @@ import java.util.List;
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
-    private final SimulacaoRepository simulacaoRepository;
 
     @Transactional
     public ClienteResponseDTO criar(ClienteRequestDTO dto) {
@@ -61,11 +58,6 @@ public class ClienteService {
     @Transactional
     public void deletar(Long id) {
         Cliente cliente = buscarEntidadePorId(id);
-
-        if (simulacaoRepository.existsByClienteId(id)) {
-            throw new ConflictException("Nao e possivel remover um cliente com simulacoes cadastradas.");
-        }
-
         clienteRepository.delete(cliente);
     }
 

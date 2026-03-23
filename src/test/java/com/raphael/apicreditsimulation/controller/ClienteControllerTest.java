@@ -3,6 +3,7 @@ package com.raphael.apicreditsimulation.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raphael.apicreditsimulation.dto.ClienteRequestDTO;
 import com.raphael.apicreditsimulation.dto.EnderecoRequestDTO;
+import com.raphael.apicreditsimulation.dto.SimulacaoRequestDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -79,12 +83,27 @@ class ClienteControllerTest {
     }
 
     @Test
-    @DisplayName("Deve deletar cliente e retornar 204")
+    @DisplayName("Deve deletar cliente com simulacoes e retornar 204")
     void deveDeletarCliente() throws Exception {
         Long id = criarClienteERetornarId("55544433322", "Cliente Removivel");
+        SimulacaoRequestDTO simulacaoRequestDTO = new SimulacaoRequestDTO(
+                LocalDateTime.of(2024, 6, 15, 10, 30, 26),
+                new BigDecimal("300000.00"),
+                new BigDecimal("1000000.00"),
+                150,
+                new BigDecimal("2.00")
+        );
+
+        mockMvc.perform(post("/clientes/{clienteId}/simulacoes", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(simulacaoRequestDTO)))
+                .andExpect(status().isCreated());
 
         mockMvc.perform(delete("/clientes/{id}", id))
                 .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/clientes/{id}", id))
+                .andExpect(status().isNotFound());
     }
 
     @Test
