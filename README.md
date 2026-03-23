@@ -171,7 +171,6 @@ http://localhost:8080
 
 - `201 Created`
 - `400 Bad Request` para payload inválido
-- `409 Conflict` para CPF já cadastrado
 
 ### 2. Listar clientes
 
@@ -216,7 +215,6 @@ http://localhost:8080
 - `200 OK`
 - `400 Bad Request` para payload inválido
 - `404 Not Found` se o cliente não existir
-- `409 Conflict` se o CPF já estiver em uso por outro cliente
 
 ### 5. Deletar cliente
 

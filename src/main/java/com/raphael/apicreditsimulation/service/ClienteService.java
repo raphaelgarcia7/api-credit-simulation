@@ -25,8 +25,6 @@ public class ClienteService {
 
     @Transactional
     public ClienteResponseDTO criar(ClienteRequestDTO dto) {
-        validarCpfDisponivel(dto.cpf(), null);
-
         Cliente cliente = Cliente.builder()
                 .cpf(dto.cpf())
                 .nome(dto.nome())
@@ -52,7 +50,6 @@ public class ClienteService {
     @Transactional
     public ClienteResponseDTO atualizar(Long id, ClienteRequestDTO dto) {
         Cliente cliente = buscarEntidadePorId(id);
-        validarCpfDisponivel(dto.cpf(), id);
 
         cliente.setCpf(dto.cpf());
         cliente.setNome(dto.nome());
@@ -70,20 +67,6 @@ public class ClienteService {
         }
 
         clienteRepository.delete(cliente);
-    }
-
-    private void validarCpfDisponivel(String cpf, Long clienteId) {
-        if (clienteId == null) {
-            clienteRepository.findByCpf(cpf)
-                    .ifPresent(cliente -> {
-                        throw new ConflictException("CPF ja cadastrado.");
-                    });
-            return;
-        }
-
-        if (clienteRepository.existsByCpfAndIdNot(cpf, clienteId)) {
-            throw new ConflictException("CPF ja cadastrado.");
-        }
     }
 
     private Cliente buscarEntidadePorId(Long id) {
